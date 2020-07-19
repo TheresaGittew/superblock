@@ -5,7 +5,6 @@ from preprocessing.GenerationSubsets import *
 
 # parameters (will later be initialized in separated script)
 I_center = [100, 100, 100]  # number of specific centers per center type
-Center_Total = 300
 I = sum(i for i in I_center)  # number of total placable centers (general centers)
 I_c = create_specific_centers(I_center)  # specific centers per center type
 C = {'museum', 'doctor', 'police'}  # center types
@@ -145,7 +144,7 @@ for sb in range(SB):
 # constraint 4c
 # Sum of placementKey overall superblocks must be less/equal 1 for all general centers
 # (each center can only be placed maximal once)
-for i in range(Center_Total):
+for i in range(I):
     m.addConstr(sum(placementKey[sb, i] for sb in range(SB)) <= 1, "4c")
 
 # constraint 5
