@@ -4,11 +4,13 @@ from pandas import *
 from preprocessing.GenerationSubsets import *
 
 # parameters (will later be initialized in separated script)
-I_center = [100, 100, 100]  # number of specific centers per center type
+I_center = [10, 10, 10]  # number of specific centers per center type
 I = sum(i for i in I_center)  # number of total placable centers (general centers)
 I_c = create_specific_centers(I_center)  # specific centers per center type
 C = {'museum', 'doctor', 'police'}  # center types
 SB = 9  # number of superblocks
+
+
 G_count = 2  # number of gates per superblock
 G = G_count * SB  # number of total gates of city (general gates)
 G_sb = create_gsb(G_count, SB)  # specific gates per superblock
@@ -22,6 +24,8 @@ filePath = 'preprocessing/Distance_Matrix_Layout_1.xlsx'
 distances = pandas.read_excel(filePath, header=None)
 maxDist_c = [3000, 3000, 3000]  # maximum Distances to center types
 M = 500000  # big M
+
+
 
 # SuperblockImplementation
 m = gp.Model('Superblock')
@@ -114,7 +118,7 @@ for c in range(len(C)):
 # for all center types and all superblocks
 for c in range(len(C)):
     for sb in range(SB):
-        m.addConstr((sum(visFreq[sb, i_c] for i_c in (I_c[c])) >= demand_c[c]), "3")
+            m.addConstr((sum(visFreq[sb, i_c] for i_c in (I_c[c])) >= demand_c[c]), "3")
 
 # constraint 4a
 # Big M constraint
@@ -171,6 +175,13 @@ for sb in range(SB):
     m.addConstr((sum(sum(area_c[c] * placementKey[sb, i] for i in (I_c[c])) for c in
                      range(len(C))) <= maxArea), "6a")
 
+
+#symmetry breaking constraint
+for c in range(len(C)):
+    print(I_c[c])
+    for i in I_c[c]:
+        if i <= len(I_c[c]) - 1:
+            m.addConstr(sum(placementKey[sb, i] for sb in range(SB)) >= sum(placementKey[sb, i+1] for sb in range(SB)))
+
 # execution
-m.setParam('TimeLimit', 30)
 m.optimize()
