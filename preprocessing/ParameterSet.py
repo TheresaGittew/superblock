@@ -66,7 +66,7 @@ class Params:
         self.beta = df['beta'].array
         self.set_C = [i for i in range(len(self.area_c))]
         self.num_C_total = len(self.set_C)
-        self.is_gc = [True if df['gigacenter'].array[i] == 'True' else False for i in self.set_C]
+        self.subset_C_gigac = [i for i in self.set_C if df['gigacenter'].array[i] == True]
 
         # distance matrix
         filePath =  'preprocessing/Distance_Matrix_Layout_1.xlsx'

@@ -1,6 +1,7 @@
 import gurobipy as gp
 from gurobipy import GRB
 from pandas import *
+import numpy as np
 from preprocessing.ParameterSet import *
 
 
@@ -156,9 +157,8 @@ def execute_superblock(pm):
     # The areas of all placed specific centers must be less/equal the maximum available area
     # in a superblock for all superblocks
     for sb in pm.set_SB:
-        if sb not in pm.subset_SB_with_GC:
             m.addConstr(sum(sum(pm.area_c[c] * placementKey[sb, i] for i in (pm.subset_I_c[c])) for c in
-                     pm.set_C) <= pm.max_area_per_sb[sb], "6a")
+                            list(set(pm.set_C) - set(pm.subset_C_gigac))) <= pm.max_area_per_sb[sb], "6a")
 
     # constraint 6a
     # The placement key is already defined for sb's that are reserved for gigacenter:
