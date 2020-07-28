@@ -1,2 +1,2 @@
 # superblock
-finds the optimal layout for a superblock for an greenfield approach
+finds the optimal layout for a superblock using the greenfield approach
