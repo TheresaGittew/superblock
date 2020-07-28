@@ -6,7 +6,6 @@ from preprocessing.ParameterSet import *
 
 def execute_superblock(pm):
 
-
     m = gp.Model('Superblock')
 
     # decision variables
@@ -50,7 +49,6 @@ def execute_superblock(pm):
     # to all general gates, for a specific center
     # equal the visitor frequency for the specific center for all superblocks and all specific centers
     for sb in pm.set_SB:
-        print("sb ", pm.subset_G_SB[sb])
         gates_of_sb = pm.subset_G_SB[sb]  # e.g. sb = 1 G_sb = [0, 1]; sb = 2 G_sb = [2, 3]
         for i in pm.set_I:
             m.addConstr((sum(sum(visitors[g1, g2, i] for g2 in pm.set_G)
@@ -65,8 +63,11 @@ def execute_superblock(pm):
 
     # constraint 1b
     # Greater/equal zero constraint for selfVisitors for all superblocks and all specific centers
-    for sb in pm.set_I:
+    for sb in pm.set_SB:
+        print("No. sb: " , sb)
         for i in pm.set_I:
+            print("Relates i's : ", i)
+            print()
             m.addConstr((selfVisitors[sb, i] >= 0), "1b")
 
     # constraint 1c
@@ -84,7 +85,7 @@ def execute_superblock(pm):
     # and for all specific centers
     for c in pm.set_C:
         for i_c in (pm.subset_I_c[c]):
-            m.addConstr(sum(visFreq[sb, i_c] for sb in pm.set_SB) >= pm.capacity_c[c] * pm.beta * sum(
+            m.addConstr(sum(visFreq[sb, i_c] for sb in pm.set_SB) >= pm.capacity_c[c] * pm.beta[c] * sum(
                 placementKey[sb, i_c] for sb in pm.set_SB), "2a")
 
     # constraint 2b
@@ -99,12 +100,13 @@ def execute_superblock(pm):
     # for all center types and all superblocks
     for c in pm.set_C:
         for sb in pm.set_SB:
+            if sb not in pm.subset_SB_with_GC:
                 m.addConstr((sum(visFreq[sb, i_c] for i_c in (pm.subset_I_c[c])) >= pm.demand_c[c]), "3")
 
     # constraint 4a
     # Big M constraint
     # if center is placed, visitors must be less than threshold M for all superblocks, for all general centers,
-    # for all  general gates and for block specific gates (to make sur that visitor's dosn't visit a center instance i
+    # for all  general gates and for block specific gates (to make sure that visitor's don't visit a center instance i
     # that hasn't been build)
     for sb in pm.set_SB:
         # print(sb)
@@ -136,7 +138,6 @@ def execute_superblock(pm):
     # constraint 5
     # Distances that are traveled from g1 to g2 for a specific center must be less/equal the maxDistance
     # per center type for all center types, specific centers and general gates
-    print("Distances : " , pm.distances)
     for c in pm.set_C:
         for i_c in pm.subset_I_c[c]:
             for g1 in pm.set_G:
@@ -156,7 +157,18 @@ def execute_superblock(pm):
     # in a superblock for all superblocks
     for sb in pm.set_SB:
         m.addConstr(sum(sum(pm.area_c[c] * placementKey[sb, i] for i in (pm.subset_I_c[c])) for c in
-                         pm.set_C) <= pm.max_area, "6a")
+                     pm.set_C) <= pm.max_area_per_sb[sb], "6a")
+
+    # constraint 6a
+    # The placement key is already defined for sb's that are reserved for gigacenter:
+    print(pm.dict_sb_giga_centertype)
+
+    for sb in pm.subset_SB_with_GC:
+        # look up assigned center typ
+        assigned_centertyp = pm.dict_sb_giga_centertype[sb]
+        assigned_center_instances = pm.subset_I_c[assigned_centertyp]
+        m.addConstr(sum(placementKey[sb, i] for i in assigned_center_instances) == 1)
+
 
     # symmetry breaking constraint
     for c in pm.set_C:
@@ -171,7 +183,6 @@ def execute_superblock(pm):
     return m.getVars();
 
 
-params = Params()
+params = Params([[4,'Hospital']])
 
-print('here')
 execute_superblock(params)

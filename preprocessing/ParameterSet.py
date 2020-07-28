@@ -1,5 +1,6 @@
 import pandas
 import math
+import numpy
 
 
 class Params:
@@ -14,6 +15,7 @@ class Params:
             next_row = [center_counter + j for j in range(i)]
             set_I_c.append(next_row)
             center_counter = next_row[-1] + 1 if next_row else center_counter
+        print("Set ic ", set_I_c)
         return set_I_c
 
     #  creates array with specific gates per superblock
@@ -32,17 +34,27 @@ class Params:
         # aufrunden, auch wenn abrunden logisch gesehen richtig wäre (es geht ja darum, dass die Mindestauslastung eingehalten wird)
         # so aber kann nicht sichergestellt werden, dass ub_per_center nicht irgendwo den Wert Null annimmt
         # daher ist das aufgerundete rein theroetisch mehr, als durch die Constraints möglich wäre
-        ub_per_center = [math.floor((self.demand_c[i] * self.num_SB_total/ (self.capacity_c[i] * self.beta))) for i in range (len(self.capacity_c))]
+        ub_per_center = [math.floor((self.demand_c[i] * self.num_SB_total/ (self.capacity_c[i] * self.beta[i]))) for i in range (len(self.capacity_c))]
         return ub_per_center
 
+    def create_dict_for_gigacenter(self, index_sb_with_gc):
+        self.dict_sb_giga_centertype = {}
+        for i in index_sb_with_gc:
+            index_gigacenter = (numpy.where(numpy.array(self.centernames) == i[1]))[0][0]
 
-    def __init__ (self):
+            # creates dictionary of type [4,1],[2,3]
+            # means: on superblock 4, we have  centertype 1 (that has to be a gigacenter), on superblock 2, we have cetnertype 3...
+            self.dict_sb_giga_centertype[i[0]] = index_gigacenter
+        print("dictionary" , self.dict_sb_giga_centertype)
 
-        self.num_SB_total = 9                                     # number of superblocks
-        self.set_SB = [i for i in range(self.num_SB_total)]       # create set where each number is the index of specific superbl.
-        self.beta = 0.05
-        self.max_area = 12000
+    # index_sb_with_gc is an array in which we predefine sb-numbers and the assigned gigacenter type [4,'Hospital'][10, 'University']...
+    def __init__ (self, index_sb_with_gc):
+
+        self.num_SB_total = 9
+        self.set_SB = [i for i in range(self.num_SB_total)]
         self.inhabitants_per_sb = 5000
+
+
 
         # input parameters that we want to obtain from the excel file
         filePath =  'preprocessing/MFMS_Daten_Dummy.xlsx'
@@ -53,6 +65,7 @@ class Params:
         self.capacity_c = df['capacity_c'].array
         self.centernames = df['centernames'].array
         self.max_dist_c = df['max_dist_c'].array
+        self.beta = df['beta'].array
         self.set_C = [i for i in range(len(self.area_c))]
         self.num_C_total = len(self.set_C)
         self.is_gc = [True if df['gigacenter'].array[i] == 'True' else False for i in self.set_C]
@@ -72,13 +85,27 @@ class Params:
         self.ub_per_center = self.get_ub_for_center()              # calculates the max.number of possible center instances for each type
         self.num_I_total = sum(i for i in self.ub_per_center)       # number of total placable centers (general centers), i in I describes all used centers independent of center type
         self.set_I = [i for i in range(self.num_I_total)]
+        print("Assertion:")
+        print(self.ub_per_center)
+
         for i in range(self.num_C_total):
             assert self.ub_per_center[i] > 0
         self.subset_I_c = self.create_specific_centers()  # assigns value to self.I_c
 
+        # giga center settings (SB_with_GC is subset with the index of SB's that are reserved for GB);
+        # in the dictionary, we can look up the assigned center type for such a reserved SB.
+        self.subset_SB_with_GC = [int(i) for i in numpy.array(index_sb_with_gc)[:, 0]]
+
+        # max area settings (usually, lot of space => but in case sb's are reserved for a giga center, max area = 0)
+        self.max_area_normal = 12000
+        self.max_area_gc = 0
+        print("self subset sb with gc: ", self.subset_SB_with_GC)
+        self.max_area_per_sb = [self.max_area_normal if sb not in self.subset_SB_with_GC else self.max_area_gc for sb in self.set_SB]
+        # dictionary
+        self.create_dict_for_gigacenter(index_sb_with_gc)
 
 
 
-
-param = Params()
-print(param.distances)
+a = numpy.array([[0,1], [0,1], [0,1]])
+b = a[:,0]
+print(b)
