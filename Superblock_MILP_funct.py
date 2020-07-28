@@ -156,12 +156,12 @@ def execute_superblock(pm):
     # The areas of all placed specific centers must be less/equal the maximum available area
     # in a superblock for all superblocks
     for sb in pm.set_SB:
-        m.addConstr(sum(sum(pm.area_c[c] * placementKey[sb, i] for i in (pm.subset_I_c[c])) for c in
+        if sb not in pm.subset_SB_with_GC:
+            m.addConstr(sum(sum(pm.area_c[c] * placementKey[sb, i] for i in (pm.subset_I_c[c])) for c in
                      pm.set_C) <= pm.max_area_per_sb[sb], "6a")
 
     # constraint 6a
     # The placement key is already defined for sb's that are reserved for gigacenter:
-    print(pm.dict_sb_giga_centertype)
 
     for sb in pm.subset_SB_with_GC:
         # look up assigned center typ
@@ -171,11 +171,11 @@ def execute_superblock(pm):
 
 
     # symmetry breaking constraint
-    for c in pm.set_C:
-        for i in pm.subset_I_c[c]:
-            if i <= len(pm.subset_I_c[c]) - 1:
-                m.addConstr(
-                    sum(placementKey[sb, i] for sb in pm.set_SB) >= sum(placementKey[sb, i + 1] for sb in pm.set_SB))
+    #for c in pm.set_C:
+     #   for i in pm.subset_I_c[c]:
+     #       if i <= len(pm.subset_I_c[c]) - 1:
+     #           m.addConstr(
+     #               sum(placementKey[sb, i] for sb in pm.set_SB) >= sum(placementKey[sb, i + 1] for sb in pm.set_SB))
 
     # execution
     m.optimize()

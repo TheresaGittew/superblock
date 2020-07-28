@@ -54,8 +54,6 @@ class Params:
         self.set_SB = [i for i in range(self.num_SB_total)]
         self.inhabitants_per_sb = 5000
 
-
-
         # input parameters that we want to obtain from the excel file
         filePath =  'preprocessing/MFMS_Daten_Dummy.xlsx'
         df = pandas.read_excel(filePath)
@@ -105,7 +103,3 @@ class Params:
         self.create_dict_for_gigacenter(index_sb_with_gc)
 
 
-
-a = numpy.array([[0,1], [0,1], [0,1]])
-b = a[:,0]
-print(b)
