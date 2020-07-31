@@ -47,13 +47,14 @@ class Params:
     # for a share of the population in each superblock, we generate a 2-dim. array
     # first dimension: index of origin gate
     # second dimension: all other gates in a sufficiently large distance to that gate
-    def create_subset_gates_for_commercials(self):
-        self.subset_G_min_dist = []
+    def create_subset_gates_for_commercials(self, zone_dist):
+        subset_G_in_zone = []
         for i in self.distances:
             matches_current_gate = []
             for j in self.distances:
-                if self.distances.iloc[i, j] > self.min_dist_commercial: matches_current_gate.append(j)
-            self.subset_G_min_dist.append(matches_current_gate)
+                if self.distances.iloc[i, j] > zone_dist: matches_current_gate.append(j)
+            subset_G_in_zone.append(matches_current_gate)
+        return subset_G_in_zone
 
     # index_sb_with_gc is an array in which we predefine sb-numbers and the assigned gigacenter type
     # [4,'Hospital'][10, 'University']...
@@ -82,14 +83,22 @@ class Params:
         # distance matrix
         filePath = 'preprocessing/Distance_Matrix_Layout_1.xlsx' # 'Distance_Matrix_Layout_1.xlsx'#'preprocessing/Distance_Matrix_Layout_1.xlsx'
         self.distances = pandas.read_excel(filePath, header=None)
-        # sufficiently large distance ( for commercial traffic )
-        self.min_dist_commercial = 3500
 
+        # commercial building + commercial traffic special settings
+        # first we set the "zone" distances
+        self.com_buildings_zone1_dist = 2000
+        self.com_buildings_zone2_dist = 3500
+        # also we set the share of people that at least have to travel this distance
+        self.prop_demand_zone1 = 0.3
+        self.prop_demand_zone2 = 0.2
 
-        # commercial buildings
-        # we create a set that defines for each gate all other gates in a sufficiently large distance
-        # for modeling the commercial traffic
-        self.create_subset_gates_for_commercials()
+        # then we create a set that specifies the  gates in a particular zone for any given gate
+        # these destination gates then have a min. distance to the origin gate
+        self.subset_G_zone1 = self.create_subset_gates_for_commercials(self.com_buildings_zone1_dist)
+        self.subset_G_zone2 = self.create_subset_gates_for_commercials(self.com_buildings_zone2_dist)
+        print("set 1: ", self.subset_G_zone1)
+        print("set 2: " , self.subset_G_zone2)
+
 
         # big M
         self.M = 500000
