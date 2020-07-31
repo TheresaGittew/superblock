@@ -35,7 +35,7 @@ def execute_superblock(pm):
     for g1 in pm.set_G:
         for g2 in pm.set_G:
             for i in pm.set_I:
-                z[g1, g2, i] = m.addVar(vtype=GRB.BINARY, name='z')
+                z[g1, g2, i] = m.addVar(vtype=GRB.BINARY, name='z ' + str(g1) + ' ' + str(g2) + ' ' + str(i))
 
     m.update()
 
@@ -200,9 +200,83 @@ def execute_superblock(pm):
         if (v.x > 0):
             print('%s %g' % (v.varName, v.x))
 
-    return m.getVars();
+    return m, m.getVars();
 
 
-params = Params([[4,'Hospital']])
+model, params = Params([[4,'Hospital']])
 
-result = execute_superblock(params)
+model, result = execute_superblock(params)
+
+def create_output(model):
+
+    visitors = [] #{}
+    for g1 in params.set_G:
+        for g2 in params.set_G:
+            for i in params.set_I:
+                value = str(model.getVarByName('visitors from gate '+ str(g1) +' to gate ' + str(g2)+ ' for center type '+ str(i)))
+                value = value.split('value')[1]
+                value = value.split('.')[0]
+                visitors.append({'g1': g1,
+                               'g2': g2,
+                               'i': i,
+                               'visitors': int(value)})
+                #visitors[g1,g2,i] = int(value)
+    visitors = pd.DataFrame(visitors, index = None)
+
+
+    selfVisitors = [] #{}
+    for sb in params.set_SB:
+        for i in params.set_I:
+            value = str(model.getVarByName('selfVisitors from sb '+str(sb)+' for center '+str(i)))
+            value = value.split('value')[1]
+            value = value.split('.')[0] 
+            selfVisitors.append({'sb': sb,
+                                 'i': i,
+                                 'selfVisitors': int(value)})
+            #selfVisitors[sb,i] = int(value)
+    selfVisitors = pd.DataFrame(selfVisitors, index = None)
+
+
+    visFreq = [] #{}
+    for sb in params.set_SB:
+        for i in params.set_I:
+            value = str(model.getVarByName('visFreq of sb '+str(sb) +' for center '+str(i)))
+            value = value.split('value')[1]
+            value = value.split('.')[0] 
+            visFreq.append({'sb': sb,
+                           'i': i,
+                           'visFreq': int(value)})
+            #visFreq[sb,i] = int(value)
+    visFreq = pd.DataFrame(visFreq, index = None)
+
+
+    placementKey = [] #{}
+    for sb2 in params.set_SB:
+        for i in params.set_I:
+            value = str(model.getVarByName('placementKey for sb' + str(sb2) + ' and center ' + str(i))).split('value')[1]
+            value = value.split('.')[0]
+            placementKey.append({'sb2': sb2,
+                                'i': i,
+                                'placementKey': int(value)})
+            #placementKey[sb,i] = int(value)
+    placementKey = pd.DataFrame(placementKey, index = None)
+
+    z = []#{}
+    for g1 in params.set_G:
+        for g2 in params.set_G:
+            for i in params.set_I:
+                value = str(model.getVarByName('z ' + str(g1) + ' ' + str(g2) + ' ' + str(i))).split('value')[1]
+                value = value.split('.')[0]
+                z.append({'g1': g1,
+                         'g2': g2,
+                         'i': i,
+                         'z': int(value)})
+                #z[g1,g2,i] = int(value)
+    z = pd.DataFrame(z, index = None)
+
+    return visitors, visFreq, placementKey, z
+
+visitors, visFreq, placementKey, z = create_output(model)
+
+
+
