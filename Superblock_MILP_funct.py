@@ -166,8 +166,7 @@ def execute_superblock(pm):
     for sb in pm.set_SB:
         if sb not in pm.subset_SB_with_GC:
             for c_commerc in pm.subset_C_commc:
-                for g1 in pm.subset_G_SB[sb]:
-                    m.addConstr(sum(sum(sum(visitors[g1, g2, i] for g2 in pm.subset_G_min_dist[g1]) for g1 in pm.subset_G_SB[sb]) for i in pm.subset_I_c[c_commerc]) >= pm.demand_c[c_commerc] * 0.1)
+                m.addConstr(sum(sum(sum(visitors[g1, g2, i] for g2 in pm.subset_G_min_dist[g1]) for g1 in pm.subset_G_SB[sb]) for i in pm.subset_I_c[c_commerc]) >= pm.demand_c[c_commerc] * 0.1)
 
 
     # symmetry breaking constraint
