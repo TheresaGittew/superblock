@@ -31,31 +31,41 @@ class Params:
         return G_sb
 
     def get_ub_for_center(self):
-        # aufrunden, auch wenn abrunden logisch gesehen richtig wäre (es geht ja darum, dass die Mindestauslastung eingehalten wird)
-        # so aber kann nicht sichergestellt werden, dass ub_per_center nicht irgendwo den Wert Null annimmt
-        # daher ist das aufgerundete rein theroetisch mehr, als durch die Constraints möglich wäre
-        ub_per_center = [math.floor((self.demand_c[i] * self.num_SB_total/ (self.capacity_c[i] * self.beta[i]))) for i in range (len(self.capacity_c))]
+        ub_per_center = [math.floor((self.demand_c[i] * self.num_SB_total / (self.capacity_c[i] * self.beta[i]))) for i
+                         in range(len(self.capacity_c))]
         return ub_per_center
 
+    # creates dictionary of type [4,1],[2,3]
+    # means: on superblock 4, we have  centertype 1 (that has to be a gigacenter), on superblock 2, we have c-type 3...
     def create_dict_for_gigacenter(self, index_sb_with_gc):
         self.dict_sb_giga_centertype = {}
         for i in index_sb_with_gc:
             index_gigacenter = (numpy.where(numpy.array(self.centernames) == i[1]))[0][0]
-
-            # creates dictionary of type [4,1],[2,3]
-            # means: on superblock 4, we have  centertype 1 (that has to be a gigacenter), on superblock 2, we have cetnertype 3...
             self.dict_sb_giga_centertype[i[0]] = index_gigacenter
-        print("dictionary" , self.dict_sb_giga_centertype)
 
-    # index_sb_with_gc is an array in which we predefine sb-numbers and the assigned gigacenter type [4,'Hospital'][10, 'University']...
-    def __init__ (self, index_sb_with_gc):
+    # given the minimum distance that has to be in between the origin superblock and destination commercial building
+    # for a share of the population in each superblock, we generate a 2-dim. array
+    # first dimension: index of origin gate
+    # second dimension: all other gates in a sufficiently large distance to that gate
+    def create_subset_gates_for_commercials(self):
+        self.subset_G_min_dist = []
+        for i in self.distances:
+            matches_current_gate = []
+            for j in self.distances:
+                if self.distances.iloc[i, j] > self.min_dist_commercial: matches_current_gate.append(j)
+            self.subset_G_min_dist.append(matches_current_gate)
 
+    # index_sb_with_gc is an array in which we predefine sb-numbers and the assigned gigacenter type
+    # [4,'Hospital'][10, 'University']...
+    def __init__(self, index_sb_with_gc):
+
+        # sb total, inhabitants
         self.num_SB_total = 9
         self.set_SB = [i for i in range(self.num_SB_total)]
         self.inhabitants_per_sb = 5000
 
         # input parameters that we want to obtain from the excel file
-        filePath =  'preprocessing/MFMS_Daten_Dummy.xlsx'
+        filePath = 'preprocessing/MFMS_Daten_Dummy.xlsx' #MFMS_Daten_Dummy.xlsx' #'preprocessing/MFMS_Daten_Dummy.xlsx'
         df = pandas.read_excel(filePath)
         self.area_c = df['area_c'].array
         demand_rate_c = df['demand_rate_c'].array
@@ -66,26 +76,39 @@ class Params:
         self.beta = df['beta'].array
         self.set_C = [i for i in range(len(self.area_c))]
         self.num_C_total = len(self.set_C)
-        self.subset_C_gigac = [i for i in self.set_C if df['gigacenter'].array[i] == True]
+        self.subset_C_gigac = [i for i in self.set_C if df['gigacenter'].array[i]] # center types are a giga c.
+        self.subset_C_commc = [i for i in self.set_C if df['commercial'].array[i]] # center types are commercial b.
 
         # distance matrix
-        filePath =  'preprocessing/Distance_Matrix_Layout_1.xlsx'
+        filePath = 'preprocessing/Distance_Matrix_Layout_1.xlsx' # 'Distance_Matrix_Layout_1.xlsx'#'preprocessing/Distance_Matrix_Layout_1.xlsx'
         self.distances = pandas.read_excel(filePath, header=None)
-        self.M = 500000  # big M
+        # sufficiently large distance ( for commercial traffic )
+        self.min_dist_commercial = 3500
 
 
-        # create sb's and gates
+        # commercial buildings
+        # we create a set that defines for each gate all other gates in a sufficiently large distance
+        # for modeling the commercial traffic
+        self.create_subset_gates_for_commercials()
+
+        # big M
+        self.M = 500000
+
+        # gates
         self.num_G_per_SB = 2                                     # number of gates per superblock
         self.num_G_total = self.num_G_per_SB * self.num_SB_total  # number of total gates of city (general gates)
         self.set_G = [i for i in range(self.num_G_total)]
-        self.subset_G_SB = self.create_gsb()                        # specific gates per superblock; G_sb as subset of G
+        self.subset_G_SB = self.create_gsb()                      # specific gates per superblock; G_sb as subset of G
 
-        self.ub_per_center = self.get_ub_for_center()              # calculates the max.number of possible center instances for each type
-        self.num_I_total = sum(i for i in self.ub_per_center)       # number of total placable centers (general centers), i in I describes all used centers independent of center type
+        # centers
+        self.ub_per_center = self.get_ub_for_center()   # calculates the max.# of possible center instances for each type
+        self.num_I_total = sum(i for i in
+                               self.ub_per_center)      # i in I describes all used centers independent of center type
         self.set_I = [i for i in range(self.num_I_total)]
+
+        # we have to make sure that the max. allowed number of placable centers is not 0! Otherwise infeasible model!
         print("Assertion:")
         print(self.ub_per_center)
-
         for i in range(self.num_C_total):
             assert self.ub_per_center[i] > 0
         self.subset_I_c = self.create_specific_centers()  # assigns value to self.I_c
@@ -97,9 +120,16 @@ class Params:
         # max area settings (usually, lot of space => but in case sb's are reserved for a giga center, max area = 0)
         self.max_area_normal = 12000
         self.max_area_gc = 0
-        print("self subset sb with gc: ", self.subset_SB_with_GC)
-        self.max_area_per_sb = [self.max_area_normal if sb not in self.subset_SB_with_GC else self.max_area_gc for sb in self.set_SB]
+        self.max_area_per_sb = [self.max_area_normal if sb not in self.subset_SB_with_GC else self.max_area_gc for sb in
+                                self.set_SB]
         # dictionary
         self.create_dict_for_gigacenter(index_sb_with_gc)
+
+
+params = Params([[4,'Hospital']])
+print(params.distances)
+print(params.subset_C_gigac)
+print(params.subset_C_commc)
+
 
 

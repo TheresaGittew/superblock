@@ -65,10 +65,7 @@ def execute_superblock(pm):
     # constraint 1b
     # Greater/equal zero constraint for selfVisitors for all superblocks and all specific centers
     for sb in pm.set_SB:
-        print("No. sb: " , sb)
         for i in pm.set_I:
-            print("Relates i's : ", i)
-            print()
             m.addConstr((selfVisitors[sb, i] >= 0), "1b")
 
     # constraint 1c
@@ -109,15 +106,11 @@ def execute_superblock(pm):
     # if center is placed, visitors must be less than threshold M for all superblocks, for all general centers,
     # for all  general gates and for block specific gates (to make sure that visitor's don't visit a center instance i
     # that hasn't been build)
-    for sb in pm.set_SB:
-        # print(sb)
+    for sb in pm.set_SB:   # we loop through all sb's that potentially have the center instance i
         gates_of_sb = pm.subset_G_SB[sb]
         for i in pm.set_I:
-            # print(i)
             for g1 in pm.set_G:
-                # print(g1)
                 for g2 in gates_of_sb:
-                    # print (g2)
                     m.addConstr((visitors[g1, g2, i]
                                  <= placementKey[sb, i] * pm.M), "4a")
 
@@ -155,19 +148,26 @@ def execute_superblock(pm):
 
     # constraint 6
     # The areas of all placed specific centers must be less/equal the maximum available area
-    # in a superblock for all superblocks
+    # in a superblock for all superblocks. The max. area is 0 in case the superblock is reserved for gigacenter.
+    # Therefore, we just sum up all c's that are not giga centers.
     for sb in pm.set_SB:
             m.addConstr(sum(sum(pm.area_c[c] * placementKey[sb, i] for i in (pm.subset_I_c[c])) for c in
                             list(set(pm.set_C) - set(pm.subset_C_gigac))) <= pm.max_area_per_sb[sb], "6a")
 
     # constraint 6a
     # The placement key is already defined for sb's that are reserved for gigacenter:
-
     for sb in pm.subset_SB_with_GC:
         # look up assigned center typ
         assigned_centertyp = pm.dict_sb_giga_centertype[sb]
         assigned_center_instances = pm.subset_I_c[assigned_centertyp]
         m.addConstr(sum(placementKey[sb, i] for i in assigned_center_instances) == 1)
+
+    # constraint 7a
+    for sb in pm.set_SB:
+        if sb not in pm.subset_SB_with_GC:
+            for c_commerc in pm.subset_C_commc:
+                for g1 in pm.subset_G_SB[sb]:
+                m.addConstr(sum(sum(sum(visitors[g1, g2, i] for g2 in pm.subset_G_min_dist[g1]) for g1 in pm.subset_G_SB[sb]) for i in pm.subset_I_c[c_commerc]) >= pm.demand_c[c_commerc] * 0.1)
 
 
     # symmetry breaking constraint
