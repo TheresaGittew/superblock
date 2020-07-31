@@ -47,12 +47,13 @@ class Params:
     # for a share of the population in each superblock, we generate a 2-dim. array
     # first dimension: index of origin gate
     # second dimension: all other gates in a sufficiently large distance to that gate
-    def create_subset_gates_for_commercials(self, zone_dist):
+    def create_subset_gates_for_commercials(self, zone_dist_begin, zone_dist_end):
         subset_G_in_zone = []
         for i in self.distances:
             matches_current_gate = []
             for j in self.distances:
-                if self.distances.iloc[i, j] > zone_dist: matches_current_gate.append(j)
+                if self.distances.iloc[i, j] > zone_dist_begin and self.distances.iloc[i, j] < zone_dist_end:
+                    matches_current_gate.append(j)
             subset_G_in_zone.append(matches_current_gate)
         return subset_G_in_zone
 
@@ -94,8 +95,8 @@ class Params:
 
         # then we create a set that specifies the  gates in a particular zone for any given gate
         # these destination gates then have a min. distance to the origin gate
-        self.subset_G_zone1 = self.create_subset_gates_for_commercials(self.com_buildings_zone1_dist)
-        self.subset_G_zone2 = self.create_subset_gates_for_commercials(self.com_buildings_zone2_dist)
+        self.subset_G_zone1 = self.create_subset_gates_for_commercials(self.com_buildings_zone1_dist, self.com_buildings_zone2_dist)
+        self.subset_G_zone2 = self.create_subset_gates_for_commercials(self.com_buildings_zone2_dist, 100000)
         print("set 1: ", self.subset_G_zone1)
         print("set 2: " , self.subset_G_zone2)
 

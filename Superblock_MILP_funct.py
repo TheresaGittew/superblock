@@ -14,22 +14,22 @@ def execute_superblock(pm):
     for g1 in pm.set_G:
         for g2 in pm.set_G:
             for i in pm.set_I:
-                visitors[g1, g2, i] = m.addVar(vtype=GRB.CONTINUOUS, name='visitors')
+                visitors[g1, g2, i] = m.addVar(vtype=GRB.CONTINUOUS, name='visitors from gate '+ str(g1)+' to gate ' + str(g2)+ ' for center type '+ str(i))
 
     selfVisitors = {}
     for sb in pm.set_SB:
         for i in pm.set_I:
-            selfVisitors[sb, i] = m.addVar(vtype=GRB.CONTINUOUS, name='selfVisitors')
+            selfVisitors[sb, i] = m.addVar(vtype=GRB.CONTINUOUS, name='selfVisitors from sb '+str(sb)+' for center '+str(i))
 
     visFreq = {}
     for sb in pm.set_SB:
         for i in pm.set_I:
-            visFreq[sb, i] = m.addVar(vtype=GRB.CONTINUOUS, name='visFreq')
+            visFreq[sb, i] = m.addVar(vtype=GRB.CONTINUOUS, name='visFreq of sb '+str(sb) +' for center '+str(i))
 
     placementKey = {}
     for sb2 in pm.set_SB:
         for i in pm.set_I:
-            placementKey[sb2, i] = m.addVar(vtype=GRB.BINARY, name='placementKey' + str(sb2) + ' ' + str(i))
+            placementKey[sb2, i] = m.addVar(vtype=GRB.BINARY, name='placementKey for sb' + str(sb2) + ' and center ' + str(i))
 
     z = {}
     for g1 in pm.set_G:
@@ -151,8 +151,13 @@ def execute_superblock(pm):
     # in a superblock for all superblocks. The max. area is 0 in case the superblock is reserved for gigacenter.
     # Therefore, we just sum up all c's that are not giga centers.
     for sb in pm.set_SB:
-            m.addConstr(sum(sum(pm.area_c[c] * placementKey[sb, i] for i in (pm.subset_I_c[c])) for c in
-                            list(set(pm.set_C) - set(pm.subset_C_gigac))) <= pm.max_area_per_sb[sb], "6a")
+            if sb not in pm.subset_SB_with_GC:
+                m.addConstr(sum(sum(pm.area_c[c] * placementKey[sb, i] for i in (pm.subset_I_c[c])) for c in
+                            list(set(pm.set_C))) <= pm.max_area_per_sb[sb], "6aa")
+            else:
+                m.addConstr(sum(sum(pm.area_c[c] * placementKey[sb, i] for i in (pm.subset_I_c[c])) for c in
+                                list(set(pm.set_C) - set(pm.subset_C_gigac))) <= pm.max_area_per_sb[sb], "6ab")
+
 
     # constraint 6a
     # The placement key is already defined for sb's that are reserved for gigacenter:
@@ -162,19 +167,24 @@ def execute_superblock(pm):
         assigned_center_instances = pm.subset_I_c[assigned_centertyp]
         m.addConstr(sum(placementKey[sb, i] for i in assigned_center_instances) == 1)
 
+
     # constraint 7a
+    # A given proportion from the superblock demand for commercial building centers has to go to zone 1
     for sb in pm.set_SB:
         if sb not in pm.subset_SB_with_GC:
             for c_commerc in pm.subset_C_commc:
-                m.addConstr(sum(sum(sum(visitors[g1, g2, i] for g2 in pm.subset_G_zone1[g1]) for g1 in pm.subset_G_SB[sb]) for i in pm.subset_I_c[c_commerc]) >= pm.demand_c[c_commerc] * pm.prop_demand_zone1)
+                m.addConstr(sum(sum(sum(visitors[g1, g2, i] for g2 in pm.subset_G_zone1[g1])
+                                    for g1 in pm.subset_G_SB[sb]) for i in pm.subset_I_c[c_commerc]) >= pm.demand_c[c_commerc] * pm.prop_demand_zone1)
 
     # constraint 7b
+    # A given proportion from the superblock demand for commercial building centers has to go to zone 2
     for sb in pm.set_SB:
         if sb not in pm.subset_SB_with_GC:
             for c_commerc in pm.subset_C_commc:
                 m.addConstr(sum(
                     sum(sum(visitors[g1, g2, i] for g2 in pm.subset_G_zone2[g1]) for g1 in pm.subset_G_SB[sb]) for i in
                     pm.subset_I_c[c_commerc]) >= pm.demand_c[c_commerc] * pm.prop_demand_zone2)
+
 
     # symmetry breaking constraint
     #for c in pm.set_C:
@@ -186,9 +196,13 @@ def execute_superblock(pm):
     # execution
     m.optimize()
 
+    for v in m.getVars():
+        if (v.x > 0):
+            print('%s %g' % (v.varName, v.x))
+
     return m.getVars();
 
 
 params = Params([[4,'Hospital']])
 
-execute_superblock(params)
+result = execute_superblock(params)
