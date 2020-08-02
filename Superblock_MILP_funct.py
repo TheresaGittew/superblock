@@ -105,7 +105,7 @@ def execute_superblock(pm):
             m.addConstr(sum(visFreq[sb, i_c] for sb in pm.set_SB) <= pm.capacity_c[c], "2b")
 
     # constraint 3
-    # Sum of visitor frequency overall specific centers is greater/equal center type demand
+    # Sum of visitor frequency overall specific centers is greater/equal center type demand d
     # for all center types and all superblocks
     for c in pm.set_C:
         for sb in pm.set_SB:
