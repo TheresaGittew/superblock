@@ -36,7 +36,7 @@ def execute_superblock(pm):
     for g1 in pm.set_G:
         for g2 in pm.set_G:
             for i in pm.set_I:
-                z[g1, g2, i] = m.addVar(vtype=GRB.BINARY, name='z ' + str(g1) + ' ' + str(g2) + ' ' + str(i)')
+                z[g1, g2, i] = m.addVar(vtype=GRB.BINARY, name='z ' + str(g1) + ' ' + str(g2) + ' ' + str(i))
 
     m.update()
 
@@ -69,6 +69,7 @@ def execute_superblock(pm):
         for i in pm.set_I:
             m.addConstr((selfVisitors[sb, i] >= 0), "1b")
 
+
     # constraint 1c
     # visitors from g1 of sb to g2 of sb must be equal to zero for all superblocks,
     # for all block specific gates and all specific centers
@@ -78,6 +79,15 @@ def execute_superblock(pm):
             for g2 in gates_of_sb:
                 for i in pm.set_I:
                     m.addConstr((visitors[g1, g2, i] == 0), "1c")
+
+    # constraint 1d
+    # make sure that the selfVisitors aren't too large for a realistic value (to prevent it does not get artificially
+    # increased to fulfill the min. center utilization constraint)
+    # still can change the factor for demand
+    for sb in pm.set_SB:
+        for c in pm.set_C:
+            for i_c in (pm.subset_I_c[c]):
+                m.addConstr((selfVisitors[sb, i_c] <= pm.demand_c[c] * 5), "1d")
 
     # constraint 2a
     # Sum of visitors frequency overall superblocks is greater/equal to minimal required utilization for all center types
@@ -275,6 +285,30 @@ def create_output(model):
                 #z[g1,g2,i] = int(value)
     z = pd.DataFrame(z, index = None)
 
-    return visitors, visFreq, placementKey, z
+    return visitors, selfVisitors, visFreq, placementKey, z
                                         
-visitors, visFreq, placementKey,z = create_output(model)                                                                                                             
+visitors,selfVisitors, visFreq, placementKey,z = create_output(m)
+
+writer = pandas.ExcelWriter('Dummy.xlsx')
+
+placementKey.to_excel(writer, "PlacementKey")
+visitors.to_excel(writer, "Visitors")
+visFreq.to_excel(writer, "VisFreq")
+z.to_excel(writer,"z")
+selfVisitors.to_excel(writer,"SelfVisitors")
+
+
+
+writer.save()
+"""
+placementKey.to_excel('output\dummy.xlsx', 'placementKey')
+visitors.to_excel('output\dummy.xlsx', 'visitors')
+selfVisitors.to_excel('output\dummy.xlsx', 'selfVisitors')
+
+visFreq.to_excel('output\dummy.xlsx', 'visFreq')
+z.to_excel('output\dummy.xlsx', 'z')
+"""
+
+
+
+

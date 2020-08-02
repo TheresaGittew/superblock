@@ -31,7 +31,7 @@ class Params:
         return G_sb
 
     def get_ub_for_center(self):
-        ub_per_center = [math.floor((self.demand_c[i] * self.num_SB_total / (self.capacity_c[i] * self.beta[i]))) for i
+        ub_per_center = [math.floor((self.demand_c[i] * (self.num_SB_total - len(self.subset_SB_with_GC)) / (self.capacity_c[i] * self.beta[i]))) for i
                          in range(len(self.capacity_c))]
         return ub_per_center
 
@@ -110,22 +110,24 @@ class Params:
         self.set_G = [i for i in range(self.num_G_total)]
         self.subset_G_SB = self.create_gsb()                      # specific gates per superblock; G_sb as subset of G
 
+
+        # giga center settings (SB_with_GC is subset with the index of SB's that are reserved for GB);
+        # in the dictionary, we can look up the assigned center type for such a reserved SB.
+        self.subset_SB_with_GC = [int(i) for i in numpy.array(index_sb_with_gc)[:, 0]]
+
         # centers
-        self.ub_per_center = self.get_ub_for_center()   # calculates the max.# of possible center instances for each type
+        self.ub_per_center = self.get_ub_for_center()  # calculates the max.# of possible center instances for each type
         self.num_I_total = sum(i for i in
-                               self.ub_per_center)      # i in I describes all used centers independent of center type
+                               self.ub_per_center)  # i in I describes all used centers independent of center type
         self.set_I = [i for i in range(self.num_I_total)]
 
         # we have to make sure that the max. allowed number of placable centers is not 0! Otherwise infeasible model!
         print("Assertion:")
         print(self.ub_per_center)
         for i in range(self.num_C_total):
-            assert self.ub_per_center[i] > 0
+            assert self.ub_per_center[i] > 0 ,\
+                "Invalid Input Data for Superblock Model. The given min. utilization isn't possible for center "+str(i)
         self.subset_I_c = self.create_specific_centers()  # assigns value to self.I_c
-
-        # giga center settings (SB_with_GC is subset with the index of SB's that are reserved for GB);
-        # in the dictionary, we can look up the assigned center type for such a reserved SB.
-        self.subset_SB_with_GC = [int(i) for i in numpy.array(index_sb_with_gc)[:, 0]]
 
         # max area settings (usually, lot of space => but in case sb's are reserved for a giga center, max area = 0)
         self.max_area_normal = 12000
