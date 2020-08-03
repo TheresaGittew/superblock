@@ -7,7 +7,7 @@ def generate_distance_matrix_config_1( num_gb_in_row, num_gb_per_col, gates_p_sb
     workbook = xlsxwriter.Workbook('Distance_Matrix_Layout_1.xlsx')
     worksheet = workbook.add_worksheet()
 
-    num_sb_per_gb = 9
+    num_sb_per_gb = 16
 
     # depending on the particular layout : get gates in one row / gates in one column
     # here: gates are placed on a horizontal axis in the middle of each superblock

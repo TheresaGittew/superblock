@@ -10,11 +10,13 @@ def execute_superblock(pm):
 
     m = gp.Model('Superblock')
 
+
     # decision variables
     visitors = {}
     for g1 in pm.set_G:
         for g2 in pm.set_G:
             for i in pm.set_I:
+                #print("are here")
                 visitors[g1, g2, i] = m.addVar(vtype=GRB.CONTINUOUS, name='visitors from gate '+ str(g1)+' to gate ' + str(g2)+ ' for center type '+ str(i))
 
     selfVisitors = {}
@@ -30,12 +32,14 @@ def execute_superblock(pm):
     placementKey = {}
     for sb2 in pm.set_SB:
         for i in pm.set_I:
+            #print("are here_2")
             placementKey[sb2, i] = m.addVar(vtype=GRB.BINARY, name='placementKey for sb' + str(sb2) + ' and center ' + str(i))
 
     z = {}
     for g1 in pm.set_G:
         for g2 in pm.set_G:
             for i in pm.set_I:
+                #print("are here 3")
                 z[g1, g2, i] = m.addVar(vtype=GRB.BINARY, name='z ' + str(g1) + ' ' + str(g2) + ' ' + str(i))
 
     m.update()
@@ -87,7 +91,7 @@ def execute_superblock(pm):
     for sb in pm.set_SB:
         for c in pm.set_C:
             for i_c in (pm.subset_I_c[c]):
-                m.addConstr((selfVisitors[sb, i_c] <= pm.demand_c[c] * 5), "1d")
+                m.addConstr((selfVisitors[sb, i_c] <= pm.demand_c[c] * 3), "1d")
 
     # constraint 2a
     # Sum of visitors frequency overall superblocks is greater/equal to minimal required utilization for all center types
@@ -101,6 +105,7 @@ def execute_superblock(pm):
     # Sum of visitors frequency overall superblocks is less/equal the utilization for all center types
     # and for all specific centers
     for c in pm.set_C:
+        #print("2b")
         for i_c in (pm.subset_I_c[c]):
             m.addConstr(sum(visFreq[sb, i_c] for sb in pm.set_SB) <= pm.capacity_c[c], "2b")
 
@@ -130,6 +135,7 @@ def execute_superblock(pm):
     # If center is placed visitors to SelfVisitors to center must be less than threshold M for all superblocks
     # and for all general centers
     for sb in pm.set_SB:
+        #print("4b")
         for i in pm.set_I:
             m.addConstr((selfVisitors[sb, i]
                          <= placementKey[sb, i] * pm.M), "4b")
@@ -152,6 +158,8 @@ def execute_superblock(pm):
     # constraint 5a
     # Big M constraint that sets z[g1, g2, i] == 1 if there are visitors from g1 to g2 for i
     for c in pm.set_C:
+
+        #print("5a")
         for i in pm.subset_I_c[c]:
             for g1 in pm.set_G:
                 for g2 in pm.set_G:
@@ -184,8 +192,9 @@ def execute_superblock(pm):
     for sb in pm.set_SB:
         if sb not in pm.subset_SB_with_GC:
             for c_commerc in pm.subset_C_commc:
-                m.addConstr(sum(sum(sum(visitors[g1, g2, i] for g2 in pm.subset_G_zone1[g1])
-                                    for g1 in pm.subset_G_SB[sb]) for i in pm.subset_I_c[c_commerc]) >= pm.demand_c[c_commerc] * pm.prop_demand_zone1)
+
+                m.addConstr(sum(sum(sum(visitors[g1, g2, i] for g2 in pm.subset_G_zone1[g1]) for g1 in pm.subset_G_SB[sb])
+                                for i in pm.subset_I_c[c_commerc]) >= pm.demand_c[c_commerc] * pm.prop_demand_zone1)
 
     # constraint 7b
     # A given proportion from the superblock demand for commercial building centers has to go to zone 2
@@ -198,23 +207,25 @@ def execute_superblock(pm):
 
 
     # symmetry breaking constraint
-    #for c in pm.set_C:
-     #   for i in pm.subset_I_c[c]:
-     #       if i <= len(pm.subset_I_c[c]) - 1:
-     #           m.addConstr(
-     #               sum(placementKey[sb, i] for sb in pm.set_SB) >= sum(placementKey[sb, i + 1] for sb in pm.set_SB))
+    for c in pm.set_C:
+        for i in pm.subset_I_c[c]:
+          if i <= len(pm.subset_I_c[c]) - 1:
+                m.addConstr(
+                    sum(placementKey[sb, i] for sb in pm.set_SB) >= sum(placementKey[sb, i + 1] for sb in pm.set_SB))
 
     # execution
+    m.Params.TimeLimit = 500
     m.optimize()
 
-    for v in m.getVars():
-        if (v.x > 0):
-            print('%s %g' % (v.varName, v.x))
+    #for v in m.getVars():
+       # if (v.x > 0):
+           # print('%s %g' % (v.varName, v.x))
 
     return m, m.getVars();
 
 
-params = Params([[4,'Hospital']])
+params = Params([[5,'Hospital'],[6,'University'],[9,'Industry']])
+
 
 m, result = execute_superblock(params)
 
@@ -256,6 +267,7 @@ def create_output(model):
             value = value.split('.')[0] 
             visFreq.append({'sb': sb,
                            'i': i,
+                            'centername': params.dict_centerinstance_centertype[i],
                            'visFreq': int(value)})
             #visFreq[sb,i] = int(value)
     visFreq = pd.DataFrame(visFreq, index = None)
@@ -268,6 +280,7 @@ def create_output(model):
             value = value.split('.')[0]
             placementKey.append({'sb2': sb2,
                                 'i': i,
+                                 'centername':params.dict_centerinstance_centertype[i],
                                 'placementKey': int(value)})
             #placementKey[sb,i] = int(value)
     placementKey = pd.DataFrame(placementKey, index = None)
@@ -289,7 +302,7 @@ def create_output(model):
                                         
 visitors,selfVisitors, visFreq, placementKey,z = create_output(m)
 
-writer = pandas.ExcelWriter('Dummy.xlsx')
+writer = pandas.ExcelWriter('Output_4x4.xlsx')
 
 placementKey.to_excel(writer, "PlacementKey")
 visitors.to_excel(writer, "Visitors")

@@ -8,14 +8,19 @@ class Params:
     # creates array per center type with specific centers I_c
     def create_specific_centers(self):
         set_I_c = []
+        self.dict_centerinstance_centertype = {}
         center_counter = 0
+        j = 0
 
         for i in self.ub_per_center:
-            print(i)
             next_row = [center_counter + j for j in range(i)]
+            for n in next_row:
+                self.dict_centerinstance_centertype[n] = self.centernames[j]
             set_I_c.append(next_row)
             center_counter = next_row[-1] + 1 if next_row else center_counter
+            j += 1
         print("Set ic ", set_I_c)
+        print(self.dict_centerinstance_centertype)
         return set_I_c
 
     #  creates array with specific gates per superblock
@@ -62,12 +67,12 @@ class Params:
     def __init__(self, index_sb_with_gc):
 
         # sb total, inhabitants
-        self.num_SB_total = 9
+        self.num_SB_total = 16
         self.set_SB = [i for i in range(self.num_SB_total)]
         self.inhabitants_per_sb = 5000
 
         # input parameters that we want to obtain from the excel file
-        filePath = 'preprocessing/MFMS_Daten_Dummy.xlsx' #MFMS_Daten_Dummy.xlsx' #'preprocessing/MFMS_Daten_Dummy.xlsx'
+        filePath = 'preprocessing/Daten_real.xlsx' #MFMS_Daten_Dummy.xlsx' #'preprocessing/MFMS_Daten_Dummy.xlsx'
         df = pandas.read_excel(filePath)
         self.area_c = df['area_c'].array
         demand_rate_c = df['demand_rate_c'].array
@@ -87,11 +92,11 @@ class Params:
 
         # commercial building + commercial traffic special settings
         # first we set the "zone" distances
-        self.com_buildings_zone1_dist = 2000
-        self.com_buildings_zone2_dist = 3500
+        self.com_buildings_zone1_dist = 4000
+        self.com_buildings_zone2_dist = 5000
         # also we set the share of people that at least have to travel this distance
-        self.prop_demand_zone1 = 0.3
-        self.prop_demand_zone2 = 0.2
+        self.prop_demand_zone1 = 0.1
+        self.prop_demand_zone2 = 0.1
 
         # then we create a set that specifies the  gates in a particular zone for any given gate
         # these destination gates then have a min. distance to the origin gate
@@ -130,7 +135,7 @@ class Params:
         self.subset_I_c = self.create_specific_centers()  # assigns value to self.I_c
 
         # max area settings (usually, lot of space => but in case sb's are reserved for a giga center, max area = 0)
-        self.max_area_normal = 12000
+        self.max_area_normal = 18000
         self.max_area_gc = 0
         self.max_area_per_sb = [self.max_area_normal if sb not in self.subset_SB_with_GC else self.max_area_gc for sb in
                                 self.set_SB]
@@ -138,7 +143,7 @@ class Params:
         self.create_dict_for_gigacenter(index_sb_with_gc)
 
 
-params = Params([[4,'Hospital']])
+params = Params([[5,'Hospital'],[6,'University'],[9,'Industry']])
 print(params.distances)
 print(params.subset_C_gigac)
 print(params.subset_C_commc)
