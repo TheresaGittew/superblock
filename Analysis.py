@@ -2,7 +2,7 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-
+import pandas as pd
 
 # matches sb index to gate
 def match_sb(visitors):
@@ -20,6 +20,16 @@ def total_visitors_per_sb(visitors):
     plt.show()
     return result
 
+def heatmap(visitors):
+    visitors = match_sb(visitors)
+    visitors = visitors.iloc[:,-4:]
+    grouped_visitors = visitors.groupby(['sb1', 'sb2']).agg('sum').reset_index()
+    matrix = grouped_visitors.pivot(index='sb1', columns='sb2', values='visitors')
+    plt.figure(figsize=(20,10))
+    sns.heatmap(matrix, cmap="BuPu", linewidths=.5)
+    plt.show()
+    return matrix
+    
 
 # constructs grid
 def draw_gates(street_width, block_width, num_sb, visitors, centers):
