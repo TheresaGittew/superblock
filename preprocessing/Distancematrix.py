@@ -50,3 +50,48 @@ def generate_distance_matrix_config_1( num_gb_in_row, num_gb_per_col, gates_p_sb
 result = generate_distance_matrix_config_1(1, 1, 2, 20, 1000)
 
 print(result)
+
+#distance matrix honeycomb with on the corners 
+def generate_distance_matrix_config2(num_sb_per_gb, gates_per_sb, street_width, length, block_width):
+    workbook = xlsxwriter.Workbook('Distance_Matrix_Layout_3.xlsx')
+    worksheet = workbook.add_worksheet()
+
+    gates_total = num_sb_per_gb * gates_per_sb
+    gates_in_row = 4
+    # print(gates_in_row)
+    gate_distance_matrix = np.zeros((gates_total, gates_total))
+    locations = []
+    rows = 3
+
+    honey_comb_counter = 0.5
+    street_vertical = 1
+    triangle = (block_width - length) / 2
+    for row_index in range(rows):
+        street_horizontal = 1
+        block_counter = 0
+        length_counter = 1
+        for index in range(gates_in_row):
+            locations.append(tuple([math.floor(street_width + triangle + length_counter * length
+                                    + street_horizontal * street_width
+                                    + block_counter * block_width),
+                                    math.floor(honey_comb_counter * block_width + street_vertical * street_width)]))
+            if index % 2 == 0:
+                block_counter +=1
+            else:
+                street_horizontal += 2
+                length_counter +=1
+        honey_comb_counter += 0.5
+        street_vertical +=1
+
+    #print(locations)
+    distances = np.zeros((gates_total, gates_total))
+    for (index,gates) in enumerate(locations):
+        for (index2, gates2) in enumerate(locations):
+            #das stimmt noch nicht 
+            distances[index, index2] = abs(gates[0] - gates2[0]) + abs(gates[1] - gates2[1])
+
+    return locations, distances
+
+
+locations, distance = generate_distance_matrix_config2(6, 2, 20, 800, 1000)
+print(distance)
